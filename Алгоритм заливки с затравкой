@@ -1,0 +1,119 @@
+#include <iostream>
+#include <vector>
+#include "tgaimage.h"
+#include <stack>
+#include "tgaimage.cpp"
+ 
+const TGAColor blue = TGAColor(135, 206, 250, 255);
+const TGAColor yellow = TGAColor(255, 255, 0, 255);
+ 
+using namespace std;
+ 
+void line(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color)
+{
+    bool steep = 0;
+    float dy=abs(y1-y0),dx = abs(x1-x0);
+    float t;
+    int y;
+    if (dx < dy)
+    {
+        swap(x0, y0);
+        swap(x1, y1);
+        steep = 1;
+    }
+ 
+    if (x0 > x1)
+    {
+        swap(x0, x1);
+        swap(y0, y1);
+    }
+ 
+    for (int x = x0; x <= x1; x++)
+    {
+        t = (x - x0) / (float)(x1 - x0);
+        y = (y1-y0)*t + y0;
+        if (steep)
+            image.set(y, x, color);
+ 
+        else
+            image.set(x, y, color);
+    }
+}
+ 
+bool if_matches (int x, int y, TGAImage& image, TGAColor color_line)
+{
+    TGAColor color = image.get(x, y);
+    if (color.r == color_line.r && color.g == color_line.g && color.b == color_line.b)
+        return 1;
+    else
+        return 0;
+}
+ 
+int main()
+{
+    TGAImage image(256, 256, TGAImage::RGB);
+    int x, y, x_min, x_max, i;
+ 
+    line(0, 1, 50, 1, image, yellow);
+    line(50, 1, 50, 50, image, yellow);
+    line(50, 50, 0, 70, image, yellow);
+    line(1, 70, 0, 1, image, yellow);
+ 
+    stack <int> X;
+    stack <int> Y;
+ 
+    X.push(1);
+    Y.push(1);
+ 
+    while (!X.empty() && !Y.empty())
+    {
+        x = X.top();
+        y = Y.top();
+ 
+        X.pop();
+        Y.pop();
+ 
+        x_min = x;
+        while (!if_matches(x_min - 1, y, image, yellow))
+            x_min--;
+ 
+        x_max = x;
+        while (!if_matches(x_max + 1, y, image, yellow))
+            x_max++;
+ 
+        line(x_min, y, x_max, y, image, blue);
+ 
+        bool p = 0;
+        for (i = x_min; i <= x_max; i++)
+        {
+            if (!if_matches(i, y - 1, image, yellow))
+            {
+                if (p)
+                {
+                    X.push(i);
+                    Y.push(y - 1);
+                    p = 0;
+                }
+            }
+            else p = 1;
+        }
+ 
+        bool q = 1;
+        for (i = x_min; i <= x_max; i++)
+        {
+            if (!if_matches(i, y + 1, image, yellow))
+            {
+                if (q)
+                {
+                    X.push(i);
+                    Y.push(y + 1);
+                    q = 0;
+                }
+            }
+            else q = 1;
+        }
+    }
+ 
+    image.flip_vertically();
+    image.write_tga_file("ZA.tga");
+}
