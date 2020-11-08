@@ -1,0 +1,152 @@
+#include <iostream>
+#include "tgaimage.h"
+#include "tgaimage.cpp"
+#include <list>
+#include <iterator>
+ 
+const TGAColor white = TGAColor(255, 255, 255, 255);
+const TGAColor green = TGAColor(0, 255, 0, 255);
+ 
+using namespace std;
+ 
+void Line0(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color)
+{
+    int dx = abs(x1 - x0), dy = abs(y1 - y0), trX, trY, d1;
+ 
+    if (x0 < x1) trX = 1;
+    else trX = -1;
+ 
+    if (y0 < y1) trY = 1;
+    else trY = -1;
+ 
+    int d = dx - dy;
+ 
+    image.set(x1, y1, color);
+ 
+    while (x0 != x1 || y0 != y1 )
+    {
+        image.set(x0, y0, color);
+        d1 = d * 2;
+        if (d1 > -dy)
+        {
+            d -= dy;
+            x0 += trX;
+        }
+ 
+        if (d1 < dx)
+        {
+            d += dx;
+            y0 += trY;
+        }
+    }
+}
+ 
+void Line1(int x0, int y0, int x1, int y1, list<int> SList[], TGAImage& image,  TGAColor color)
+{
+    int dx = abs(x1 - x0), dy = abs(y1 - y0), sX, sY, d1;
+ 
+    if (x0 < x1) sX = 1;
+    else sX = -1;
+ 
+    if (y0 < y1) sY = 1;
+    else sY = -1;
+ 
+    int d = dx - dy;
+    image.set(x1,y1,color);
+    SList[y1].push_back(x1);
+ 
+    while (x0 != x1 || y0 != y1)
+    {
+        SList[y0].push_back(x0);
+        image.set(x0, y0, color);
+        d1 = d * 2;
+        if (d1 > -dy)
+        {
+            d -= dy;
+            x0 += sX;
+        }
+ 
+        if (d1 < dx)
+        {
+            d += dx;
+            y0 += sY;
+        }
+    }
+}
+ 
+void shading(list<int> SList[], int y_m, int p, TGAImage& image, TGAColor color)
+{
+    for (int i = (y_m - p + 2); i < y_m - 1;i++)
+    {
+        if (SList[i].empty()) continue;
+ 
+        list <int> xList = SList[i];
+ 
+        xList.sort();
+ 
+        auto k = xList.begin();
+        auto k_n = xList.begin();
+        k_n++;
+ 
+ 
+        if (xList.size() % 2 == 0 || (*k != *k_n - 1))
+        {
+            Line0(*k + 1, i, *k_n - 1, i, image, color);
+ 
+            for (int j = 1; j < (xList.size() / 2); j++)
+            {
+                k++;
+                k++;
+                k_n++;
+                k_n++;
+                Line0(*k + 1, i, *k_n - 1, i, image, color);
+            }
+        }
+ 
+        else
+        {
+            k++;
+            k_n++;
+            Line0(*k + 1, i, *k_n - 1, i, image, color);
+            for (int j = 1; j < ((xList.size() - 1) / 2); j++)
+            {
+                k++;
+                k++;
+                k_n++;
+                k_n++;
+                Line0(*k + 1, i, *k_n - 1, i, image, color);
+            }
+        }
+    }
+}
+ 
+int main()
+{
+    const int width = 1024;
+    const int height = 1024;
+    TGAImage image(width, height, TGAImage::RGB);
+ 
+    list<int> SList[width];
+    int y_m, p = 0;
+ 
+    Line1(0,0,210,0,SList,image, green);
+    Line1(210,0,145,170,SList,image, green);
+    Line1(145,170,0,0,SList,image, green);
+ 
+    for (int i = 0; i < width; i++)
+    {
+        list<int> xList = SList[i];
+        xList.sort();
+        if (!xList.empty())
+        {
+            y_m = i;
+            p++;
+        }
+    }
+ 
+    shading(SList, y_m, p, image,  white);
+ 
+    image.write_tga_file("list_of_edges.tga");
+ 
+    return 0;
+}
