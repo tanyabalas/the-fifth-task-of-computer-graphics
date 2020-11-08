@@ -1,0 +1,143 @@
+#include "tgaimage.h"
+#include <list>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include "tgaimage.cpp"
+ 
+const TGAColor red = TGAColor (255, 0, 0, 255);
+ 
+using namespace std;
+ 
+struct rib
+{
+    rib(float x1, float y1, float x2, float y2);
+    float x, y, dx, z;
+    bool operator == (const rib& b) const;
+    bool operator > (const rib & b) const;
+    bool operator < (const rib& b) const;
+};
+ 
+bool rib::operator == (const rib& b) const
+{
+    return this->y == b.y;
+}
+ 
+bool rib::operator > (const rib& b) const
+{
+    return this->y > b.y;
+}
+ 
+bool rib::operator < (const rib& b) const
+{
+    return this->y < b.y;
+}
+ 
+bool compare_x(const rib& first, const rib& second)
+{
+    return first.x < second.x;
+}
+ 
+rib::rib(float x1, float y1, float x2, float y2)
+{
+    if (y1 < y2)
+    {
+        swap(y1, y2);
+        swap(x1, x2);
+    }
+ 
+    this->y = ceil(y2);
+    this->z = (y1);
+    this->dx = (x1 - x2) / (y1 - y2);
+    this->x = x2 + dx * (y - y2);
+}
+ 
+void line(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color)
+{
+    bool steep = 0;
+    float dy=abs(y1-y0),dx = abs(x1-x0);
+    float t;
+    int y;
+    if (dx < dy)
+    {
+        swap(x0, y0);
+        swap(x1, y1);
+        steep = 1;
+    }
+ 
+    if (x0 > x1)
+    {
+        swap(x0, x1);
+        swap(y0, y1);
+    }
+ 
+    for (int x = x0; x <= x1; x++)
+    {
+        t = (x - x0) / (float)(x1 - x0);
+        y = (y1-y0)*t + y0;
+        if (steep)
+            image.set(y, x, color);
+        else
+            image.set(x, y, color);
+    }
+}
+ 
+int main()
+{
+    int width = 1000, height = 1000;
+    TGAImage image(width, height, TGAImage::RGB);
+    
+    vector <rib> CAP;
+    list <rib> y_list;
+    
+    int x1 = 100, x2 = 550, x3 = 700, y1 = 100, y2 = 400, y3 = 110, i;
+    float y;
+    y_list.push_back(rib(x1, y1, x2, y2));
+    y_list.push_back(rib(x1,y1,x3,y3));
+    y_list.push_back(rib(x2, y2, x3, y3));
+ 
+    line(x1, y1, x2, y3, image,red);
+    line(x1,y1,x3,y3, image,red);
+    line(x2, y2, x3, y3, image,red);
+ 
+    y_list.sort();
+ 
+    list<rib>::iterator iter;
+ 
+    auto iter_start = y_list.begin();
+    auto iter_end = y_list.end();
+ 
+     y = y_list.begin()->y;
+ 
+    do {
+        for (iter = iter_start; iter != iter_end; iter++)
+        {
+            if (iter->y == y && iter->z != iter->y)
+                CAP.push_back(*iter);
+        }
+        
+        for (i = 0; 2 * i + 1 < CAP.size(); i++)
+            line(CAP[2 * i].x, y, CAP[2 * i + 1].x, y, image, red);
+        
+        y++;
+        sort(CAP.begin(), CAP.end(), compare_x);
+        i = 0;
+        while (i < CAP.size())
+        {
+            if (y > CAP[i].z)
+                CAP.erase(CAP.begin() + i);
+            
+            else
+            {
+                CAP[i].x += CAP[i].dx;
+                if (i != 0 && CAP[i-1].x > CAP[i].x)
+                        swap(CAP[i-1], CAP[i]);
+                i++;
+            }
+        }
+    }
+    while (!CAP.empty());
+    image.write_tga_file("active_ribs.tga");
+    return 0;
+ 
+}
