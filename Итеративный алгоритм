@@ -1,0 +1,109 @@
+#include "iostream"
+#include "tgaimage.h"
+#include <stack>
+#include "tgaimage.cpp"
+ 
+using namespace std;
+ 
+const TGAColor green = TGAColor(0, 255, 0, 255);
+const TGAColor red = TGAColor(255, 0, 0, 255);
+const TGAColor white = TGAColor(255,255,255,255);
+ 
+void line(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color)
+{
+    bool steep = 0;
+    float dy=abs(y1-y0),dx = abs(x1-x0);
+    float t;
+    int y;
+    if (dx < dy)
+    {
+        swap(x0, y0);
+        swap(x1, y1);
+        steep = 1;
+    }
+ 
+    if (x0 > x1)
+    {
+        swap(x0, x1);
+        swap(y0, y1);
+    }
+ 
+    for (int x = x0; x <= x1; x++)
+    {
+        t = (x - x0) / (float)(x1 - x0);
+        y = (y1-y0)*t + y0;
+        if (steep)
+            image.set(y, x, color);
+        else
+            image.set(x, y, color);
+    }
+}
+ 
+ 
+ 
+bool if_matches (int x, int y, TGAImage& image, TGAColor color_line)
+{
+    TGAColor color = image.get(x, y);
+    if (color.r == color_line.r && color.g == color_line.g && color.b == color_line.b)
+        return 1;
+    else
+        return 0;
+}
+ 
+int main()
+{
+    TGAImage image(1000, 1000, TGAImage::RGB);
+    int x, y;
+ 
+    line(12, 50, 200, 10, image, red);
+    line(12, 50, 50, 100, image, red);
+    line(50, 100, 230, 80, image, red);
+    line(200, 10, 230, 80, image, red);
+    line(200, 10, 230, 80, image, red);
+ 
+    stack <int> X;
+    stack <int> Y;
+ 
+    X.push(50);
+    Y.push(50);
+ 
+    while (!X.empty() && !Y.empty())
+    {
+ 
+        x = X.top();
+        y = Y.top();
+ 
+        X.pop();
+        Y.pop();
+ 
+        if ( !if_matches(x, y, image, red) )
+            image.set(x, y, white);
+ 
+        if (!if_matches(x + 1, y, image, red) && !if_matches(x + 1, y, image, white))
+        {
+            X.push(x + 1);
+            Y.push(y);
+        }
+ 
+        if (!if_matches(x - 1, y, image, red) && !if_matches(x - 1, y, image, white))
+        {
+            X.push(x - 1);
+            Y.push(y);
+        }
+ 
+        if (!if_matches(x, y + 1, image, red) && !if_matches(x, y + 1, image, white))
+        {
+            X.push(x);
+            Y.push(y + 1);
+        }
+ 
+        if (!if_matches(x, y - 1, image, red) && !if_matches(x, y - 1, image, white))
+        {
+            X.push(x);
+            Y.push(y - 1);
+        }
+    }
+    image.flip_vertically();
+    image.write_tga_file("iterative_algorithm.tga");
+    return 0;
+}
